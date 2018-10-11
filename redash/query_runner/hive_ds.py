@@ -1,10 +1,9 @@
-import json
 import logging
 import sys
 import base64
 
 from redash.query_runner import *
-from redash.utils import JSONEncoder
+from redash.utils import json_dumps
 
 logger = logging.getLogger(__name__)
 
@@ -89,23 +88,20 @@ class Hive(BaseSQLQueryRunner):
         return enabled
 
     def _get_tables(self, schema):
-        try:
-            schemas_query = "show schemas"
+        schemas_query = "show schemas"
 
-            tables_query = "show tables in %s"
+        tables_query = "show tables in %s"
 
-            columns_query = "show columns in %s.%s"
+        columns_query = "show columns in %s.%s"
 
-            for schema_name in filter(lambda a: len(a) > 0, map(lambda a: str(a['database_name']), self._run_query_internal(schemas_query))):
-                for table_name in filter(lambda a: len(a) > 0, map(lambda a: str(a['tab_name']), self._run_query_internal(tables_query % schema_name))):
-                    columns = filter(lambda a: len(a) > 0, map(lambda a: str(a['field']), self._run_query_internal(columns_query % (schema_name, table_name))))
+        for schema_name in filter(lambda a: len(a) > 0, map(lambda a: str(a['database_name']), self._run_query_internal(schemas_query))):
+            for table_name in filter(lambda a: len(a) > 0, map(lambda a: str(a['tab_name']), self._run_query_internal(tables_query % schema_name))):
+                columns = filter(lambda a: len(a) > 0, map(lambda a: str(a['field']), self._run_query_internal(columns_query % (schema_name, table_name))))
 
-                    if schema_name != 'default':
-                        table_name = '{}.{}'.format(schema_name, table_name)
+                if schema_name != 'default':
+                    table_name = '{}.{}'.format(schema_name, table_name)
 
-                    schema[table_name] = {'name': table_name, 'columns': columns}
-        except Exception as e:
-            raise sys.exc_info()[1], None, sys.exc_info()[2]
+                schema[table_name] = {'name': table_name, 'columns': columns}
         return schema.values()
 
     def run_query(self, query, user):
@@ -170,7 +166,7 @@ class Hive(BaseSQLQueryRunner):
             rows = [dict(zip(column_names, row)) for row in cursor]
 
             data = {'columns': columns, 'rows': rows}
-            json_data = json.dumps(data, cls=JSONEncoder)
+            json_data = json_dumps(data)
             error = None
         except KeyboardInterrupt:
             connection.cancel()
